@@ -170,6 +170,19 @@ async function run() {
             const result = await classesCollection.updateOne(filter, updateDoc);
             res.send(result);
         })
+        app.patch('/classes/feedback/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const feedbackData=req.body;
+            const {feedbackText}=feedbackData;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    feedback: feedbackText
+                }
+            }
+            const result = await classesCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        })
         //   instructor verify and tasks
         app.get('/users/instructor/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
