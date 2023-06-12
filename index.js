@@ -107,6 +107,10 @@ async function run() {
         })
 
         // admin task
+        app.get('/allclasses', verifyJWT, verifyAdmin, async (req, res) => {
+            const result = await classesCollection.find().toArray();
+            res.send(result);
+        })
         app.patch('/users/admin/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             console.log(id)
