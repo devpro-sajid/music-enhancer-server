@@ -49,6 +49,7 @@ async function run() {
 
         const usersCollection = client.db("musicenDb").collection("users");
         const classesCollection = client.db("musicenDb").collection("classes");
+        const selectedCollection = client.db("musicenDb").collection("selectedClasses");
 
 
         app.post('/jwt', (req, res) => {
@@ -77,9 +78,10 @@ async function run() {
         }
 // general api
 app.get("/popularClasses/", async (req, res) => {
-    const result = await classesCollection.find({status:'approved'}).sort({ availableSeats: 1 }).limit(6).toArray();
+    const result = await classesCollection.find({status:'approved'}).sort({ availableSeats: -1 }).limit(6).toArray();
     res.send(result);
   });
+ 
 
         //   user api
         app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
@@ -229,7 +231,21 @@ app.get("/popularClasses/", async (req, res) => {
             const result = { student: user?.role === 'student' }
             res.send(result);
         })
-
+        app.post('/selectedClasses', async (req, res) => {
+            const item = req.body;
+            console.log(item);
+            const query={
+                email:item.email,
+                selectedId:item.selectedId
+            }
+            const existAlready=await selectedCollection.find(query).toArray();
+            console.log(existAlready)
+            if(existAlready.length!==0){
+              return  res.status(403).send({ error: true, message: 'Already added by you' });
+            }
+            const result = await selectedCollection.insertOne(item);
+            res.send(result);
+          })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
