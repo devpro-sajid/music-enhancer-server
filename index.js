@@ -75,7 +75,11 @@ async function run() {
             }
             next();
         }
-
+// general api
+app.get("/popularClasses/", async (req, res) => {
+    const result = await classesCollection.find({status:'approved'}).sort({ availableSeats: 1 }).limit(6).toArray();
+    res.send(result);
+  });
 
         //   user api
         app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
