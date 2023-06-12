@@ -107,7 +107,7 @@ async function run() {
         })
 
         // admin task
-        app.patch('/users/admin/:id',verifyJWT, verifyAdmin, async (req, res) => {
+        app.patch('/users/admin/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             console.log(id)
             const filter = { _id: new ObjectId(id) };
@@ -120,8 +120,7 @@ async function run() {
             res.send(result);
         })
 
-
-        app.patch('/users/instructor/:id',verifyJWT, verifyAdmin, async (req, res) => {
+        app.patch('/users/instructor/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
@@ -132,7 +131,19 @@ async function run() {
             const result = await usersCollection.updateOne(filter, updateDoc);
             res.send(result);
         })
-        //   instructor verify
+
+        app.patch('/users/student/:id', verifyJWT, verifyAdmin, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    role: 'student'
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        })
+        //   instructor verify and tasks
         app.get('/users/instructor/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
 
@@ -145,20 +156,23 @@ async function run() {
             const result = { instructor: user?.role === 'instructor' }
             res.send(result);
         })
-
-
-        app.patch('/users/student/:id',verifyJWT, verifyAdmin, async (req, res) => {
-            const id = req.params.id;
-            const filter = { _id: new ObjectId(id) };
-            const updateDoc = {
-                $set: {
-                    role: 'student'
-                }
+        app.get('/classes', verifyJWT, verifyInstructor, async (req, res) => {
+            const email = req.query.email;
+            if (!email) {
+                res.send([]);
             }
-            const result = await usersCollection.updateOne(filter, updateDoc);
+            const query = { instructorEmail: email };
+            const result = await classesCollection.find(query).toArray();
             res.send(result);
         })
-        //   verify student
+        app.post('/classes', verifyJWT, verifyInstructor, async (req, res) => {
+            const item = req.body;
+            const result = await classesCollection.insertOne(item);
+            res.send(result);
+        })
+
+
+        //   verify student and tasks
         app.get('/users/student/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
 
@@ -171,6 +185,8 @@ async function run() {
             const result = { student: user?.role === 'student' }
             res.send(result);
         })
+
+
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
