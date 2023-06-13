@@ -85,7 +85,10 @@ async function run() {
             const result = await classesCollection.find({ status: 'approved' }).toArray();
             res.send(result);
         });
-
+        app.get("/allInstructors/", async (req, res) => {
+            const result = await usersCollection.find({ role: 'instructor' }).toArray();
+            res.send(result);
+        });
 
 
         //   user api
