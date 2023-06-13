@@ -37,15 +37,15 @@ const client = new MongoClient(uri, {
         version: ServerApiVersion.v1,
         strict: true,
         deprecationErrors: true,
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        maxPoolSize: 10
     }
 });
 
 
 async function run() {
     try {
-        // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
-
 
         const usersCollection = client.db("musicenDb").collection("users");
         const classesCollection = client.db("musicenDb").collection("classes");
@@ -76,12 +76,17 @@ async function run() {
             }
             next();
         }
-// general api
-app.get("/popularClasses/", async (req, res) => {
-    const result = await classesCollection.find({status:'approved'}).sort({ availableSeats: -1 }).limit(6).toArray();
-    res.send(result);
-  });
- 
+        // general api
+        app.get("/popularClasses/", async (req, res) => {
+            const result = await classesCollection.find({ status: 'approved' }).sort({ availableSeats: -1 }).limit(6).toArray();
+            res.send(result);
+        });
+        app.get("/allClasses/", async (req, res) => {
+            const result = await classesCollection.find({ status: 'approved' }).toArray();
+            res.send(result);
+        });
+
+
 
         //   user api
         app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
@@ -153,7 +158,7 @@ app.get("/popularClasses/", async (req, res) => {
             const result = await usersCollection.updateOne(filter, updateDoc);
             res.send(result);
         })
-// class status update by admin
+        // class status update by admin
         app.patch('/classes/approve/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
@@ -178,8 +183,8 @@ app.get("/popularClasses/", async (req, res) => {
         })
         app.patch('/classes/feedback/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
-            const feedbackData=req.body;
-            const {feedbackText}=feedbackData;
+            const feedbackData = req.body;
+            const { feedbackText } = feedbackData;
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
@@ -234,25 +239,24 @@ app.get("/popularClasses/", async (req, res) => {
         app.post('/selectedClasses', async (req, res) => {
             const item = req.body;
             console.log(item);
-            const query={
-                email:item.email,
-                selectedId:item.selectedId
+            const query = {
+                email: item.email,
+                selectedId: item.selectedId
             }
-            const existAlready=await selectedCollection.find(query).toArray();
+            const existAlready = await selectedCollection.find(query).toArray();
             console.log(existAlready)
-            if(existAlready.length!==0){
-              return  res.status(403).send({ error: true, message: 'Already added by you' });
+            if (existAlready.length !== 0) {
+                return res.status(403).send({ error: true, message: 'Already added by you' });
             }
             const result = await selectedCollection.insertOne(item);
             res.send(result);
-          })
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
-        // Ensures that the client will close when you finish/error
-        //   await client.close();
+        
     }
 }
 run().catch(console.dir);
