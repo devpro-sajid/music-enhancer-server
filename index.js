@@ -267,6 +267,11 @@ async function run() {
             const result = await selectedCollection.insertOne(item);
             res.send(result);
         })
+        app.delete('/selectedClasses/:id',verifyJWT, async (req, res) => {
+            const selectedForDelete = { _id: new ObjectId(req.params.id) };
+            const result = await selectedCollection.deleteOne(selectedForDelete);
+            res.send(result)
+          })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
