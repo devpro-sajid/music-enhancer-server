@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 require('dotenv').config()
 // const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 const port = process.env.PORT || 5000;
@@ -79,7 +80,7 @@ async function run() {
         }
         // general api
         app.get("/popularClasses/", async (req, res) => {
-            const result = await classesCollection.find({ status: 'approved' }).sort({ availableSeats: -1 }).limit(6).toArray();
+            const result = await classesCollection.find({ status: 'approved' }).sort({ enrolled: -1 }).limit(6).toArray();
             res.send(result);
         });
         app.get("/allClasses/", async (req, res) => {
@@ -90,6 +91,7 @@ async function run() {
             const result = await usersCollection.find({ role: 'instructor' }).toArray();
             res.send(result);
         });
+
 
 
         //   user api
@@ -280,8 +282,9 @@ async function run() {
                 selectedId: item.selectedId
             }
             const existAlready = await selectedCollection.find(query).toArray();
+            const enrolledAlready=await paymentCollection.find(query).toArray();
             console.log(existAlready)
-            if (existAlready.length !== 0) {
+            if (existAlready.length !== 0 || enrolledAlready.length !== 0) {
                 return res.status(403).send({ error: true, message: 'Already added by you' });
             }
             const result = await selectedCollection.insertOne(item);
@@ -308,14 +311,41 @@ async function run() {
         })
 
         // payment related api
+        app.get('/enrolledClasses',verifyJWT,async(req,res)=>{
+            const email = req.query.email;
+            if (!email) {
+                res.send([]);
+            }
+            const query = { email: email };
+           const result= await paymentCollection.find(query).sort({ date
+            : -1 }).toArray();
+           res.send(result);
+        })
         app.post('/payments', verifyJWT, async (req, res) => {
             const payment = req.body;
             const insertResult = await paymentCollection.insertOne(payment);
 
-            const query = { _id: new ObjectId(payment._id)} 
+            const query = { _id: new ObjectId(payment._id) }
             const deleteResult = await selectedCollection.deleteOne(query)
 
             res.send({ insertResult, deleteResult });
+        })
+
+        app.patch('/classes/enrolled/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const enrolledClass=await classesCollection.findOne(filter);
+            const oldAvailableSeat=enrolledClass.availableSeats;
+            const oldEnrolled=enrolledClass.enrolled;
+            const updateDoc = {
+                $set: { 
+                    availableSeats:oldAvailableSeat-1 ,
+                    enrolled: oldEnrolled+1
+
+                }
+            }
+            const result = await classesCollection.updateOne(filter, updateDoc);
+            res.send(result);
         })
 
         // Send a ping to confirm a successful connection
