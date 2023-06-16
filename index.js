@@ -50,6 +50,7 @@ async function run() {
         const usersCollection = client.db("musicenDb").collection("users");
         const classesCollection = client.db("musicenDb").collection("classes");
         const selectedCollection = client.db("musicenDb").collection("selectedClasses");
+        const paymentCollection = client.db("musicenDb").collection("payments");
 
 
         app.post('/jwt', (req, res) => {
@@ -227,17 +228,17 @@ async function run() {
         app.patch('/classes/:id', verifyJWT, verifyInstructor, async (req, res) => {
             const id = req.params.id;
             const updatedClass = req.body;
-            const {className,image,availableSeats,price,status}=updatedClass;
-            if(status==='approved'){
+            const { className, image, availableSeats, price, status } = updatedClass;
+            if (status === 'approved') {
                 return;
             }
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
-                    className:className,
-                    image:image,
-                    availableSeats:availableSeats,
-                    price:price
+                    className: className,
+                    image: image,
+                    availableSeats: availableSeats,
+                    price: price
 
                 }
             }
@@ -249,16 +250,16 @@ async function run() {
         app.get('/selectedClasses', verifyJWT, async (req, res) => {
             const email = req.query.email;
             if (!email) {
-              res.send([]);
+                res.send([]);
             }
             const decodedEmail = req.decoded.email;
             if (email !== decodedEmail) {
-              return res.status(403).send({ error: true, message: 'forbidden Access' })
+                return res.status(403).send({ error: true, message: 'forbidden Access' })
             }
             const query = { email: email };
             const result = await selectedCollection.find(query).toArray();
             res.send(result);
-          })
+        })
         app.get('/users/student/:email', verifyJWT, async (req, res) => {
             const email = req.params.email;
 
@@ -286,17 +287,42 @@ async function run() {
             const result = await selectedCollection.insertOne(item);
             res.send(result);
         })
-        app.delete('/selectedClasses/:id',verifyJWT, async (req, res) => {
+        app.delete('/selectedClasses/:id', verifyJWT, async (req, res) => {
             const selectedForDelete = { _id: new ObjectId(req.params.id) };
             const result = await selectedCollection.deleteOne(selectedForDelete);
             res.send(result)
-          })
+        })
+        // create payment intent
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const { price } = req.body;
+            const amount = parseInt(price * 100);
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
+
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            })
+        })
+
+        // payment related api
+        app.post('/payments', verifyJWT, async (req, res) => {
+            const payment = req.body;
+            const insertResult = await paymentCollection.insertOne(payment);
+
+            const query = { _id: new ObjectId(payment._id)} 
+            const deleteResult = await selectedCollection.deleteOne(query)
+
+            res.send({ insertResult, deleteResult });
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
-        
+
     }
 }
 run().catch(console.dir);
