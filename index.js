@@ -224,7 +224,26 @@ async function run() {
             const result = await classesCollection.insertOne(item);
             res.send(result);
         })
+        app.patch('/classes/:id', verifyJWT, verifyInstructor, async (req, res) => {
+            const id = req.params.id;
+            const updatedClass = req.body;
+            const {className,image,availableSeats,price,status}=updatedClass;
+            if(status==='approved'){
+                return;
+            }
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    className:className,
+                    image:image,
+                    availableSeats:availableSeats,
+                    price:price
 
+                }
+            }
+            const result = await classesCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        })
 
         //   verify student and tasks
         app.get('/selectedClasses', verifyJWT, async (req, res) => {
