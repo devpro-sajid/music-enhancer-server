@@ -79,6 +79,10 @@ async function run() {
             next();
         }
         // general api
+        app.get("/allStatusClasses",verifyJWT,verifyAdmin, async (req, res) => {
+            const result = await classesCollection.find().toArray();
+            res.send(result);
+        });
         app.get("/popularClasses/", async (req, res) => {
             const result = await classesCollection.find({ status: 'approved' }).sort({ enrolled: -1 }).limit(6).toArray();
             res.send(result);
